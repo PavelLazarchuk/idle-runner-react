@@ -1,12 +1,14 @@
 export { IdleRunnerProvider, useIdleRunnerContext } from './context';
 export { useIdleRunner } from './use-idle-runner';
 export { useIdleTask } from './use-idle-task';
+export { useIdleChunkedTask } from './use-idle-chunked-task';
 export { useIdleValue } from './use-idle-value';
 export { useIdleCallback } from './use-idle-callback';
 export { useIdleEffect } from './use-idle-effect';
 
 export type { IdleRunnerProviderProps } from './context';
 export type { UseIdleTaskOptions } from './use-idle-task';
+export type { UseIdleChunkedTaskOptions } from './use-idle-chunked-task';
 export type {
     IdleValueStatus,
     IdleValueState,

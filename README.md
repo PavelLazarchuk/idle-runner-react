@@ -50,6 +50,24 @@ useIdleTask(() => reportImpression(id), [id], { timeout: 2000 });
 
 The task itself is always the newest closure from the last render — it is not part of `deps`.
 
+### `useIdleChunkedTask(task, deps, options?)`
+
+Like `useIdleTask`, but for a generator: instead of running to completion in one idle slice, it runs in budgeted chunks, yielding control back between them so a long computation never becomes a long task.
+
+```tsx
+useIdleChunkedTask(
+    function* () {
+        for (const item of items) {
+            processItem(item);
+            yield;
+        }
+    },
+    [items]
+);
+```
+
+Same options as `useIdleTask` — `runner`, `timeout`, `enabled`, `onError` — and the same abort-on-deps-change-or-unmount behavior. A `yield` is a checkpoint the runner can pause at, not a promise — the generator itself must stay synchronous.
+
 ### `useIdleValue(compute, deps, options?)`
 
 Computes a value off the critical path and reports it as state:
@@ -160,7 +178,7 @@ Same rules as the core package: this defers work on the main thread, it does not
 **Bad fits:**
 
 - ❌ **Anything the next paint depends on.** Deferring the total the user is watching makes INP worse, not better.
-- ❌ **Genuinely heavy, parallelizable work** — a 200ms computation is still 200ms. Chunk it with `pushChunked` on the runner directly, or move it to a Web Worker.
+- ❌ **Genuinely heavy, parallelizable work** — a 200ms computation is still 200ms. Chunk it with `useIdleChunkedTask`, or move it to a Web Worker.
 - ❌ **Data fetching.** These hooks queue synchronous work; a promise returned from a task is a value the runner resolves with, not something it waits on.
 
 ## Tests

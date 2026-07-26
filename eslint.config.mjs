@@ -10,7 +10,7 @@ export default tseslint.config(
             'react-hooks/rules-of-hooks': 'error',
             'react-hooks/exhaustive-deps': [
                 'error',
-                { additionalHooks: '(useIdleTask|useIdleValue|useIdleEffect)' },
+                { additionalHooks: '(useIdleTask|useIdleChunkedTask|useIdleValue|useIdleEffect)' },
             ],
         },
     }
