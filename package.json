@@ -1,7 +1,7 @@
 {
     "name": "@idle-runner/react",
     "version": "1.1.0",
-    "description": "React hooks for @idle-runner/core — defer and time-slice non-urgent work on the main thread.",
+    "description": "React hooks (useIdleTask, useIdleValue, useIdleCallback, useIdleEffect) to defer and time-slice non-urgent work off the main thread with requestIdleCallback — works on Safari, where it never shipped.",
     "type": "module",
     "sideEffects": false,
     "main": "./dist/index.cjs",
@@ -34,7 +34,10 @@
     "bugs": "https://github.com/PavelLazarchuk/idle-runner-react/issues",
     "homepage": "https://github.com/PavelLazarchuk/idle-runner-react#readme",
     "keywords": [
+        "@idle-runner/react",
+        "idle-runner",
         "react",
+        "react-hooks",
         "hooks",
         "idle",
         "requestIdleCallback",
@@ -44,6 +47,8 @@
         "main-thread",
         "task-queue",
         "performance",
+        "safari",
+        "nextjs",
         "typescript"
     ],
     "author": "Pavel Lazarchuk",

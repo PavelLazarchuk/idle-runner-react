@@ -1,5 +1,8 @@
 # @idle-runner/react
 
+[![npm version](https://img.shields.io/npm/v/@idle-runner/react.svg)](https://www.npmjs.com/package/@idle-runner/react)
+[![npm downloads](https://img.shields.io/npm/dm/@idle-runner/react.svg)](https://www.npmjs.com/package/@idle-runner/react)
+
 React hooks for [`@idle-runner/core`](https://github.com/PavelLazarchuk/idle-runner-core): run non-urgent work from components without blocking the main thread. Zero runtime dependencies of its own, **works on Safari** — where `requestIdleCallback` has never shipped enabled.
 
 Every hook here queues work on a runner instead of running it in the render or effect phase, and cancels that work when the component that asked for it goes away.
