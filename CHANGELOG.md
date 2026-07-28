@@ -1,5 +1,11 @@
 # @idle-runner/react
 
+## 1.1.1
+
+### Patch Changes
+
+- 5db03f9: Improve npm/search discoverability: more descriptive `description`, added `@idle-runner/react` and related terms to `keywords`, and added npm version/downloads badges to the README.
+
 ## 1.1.0
 
 ### Minor Changes
