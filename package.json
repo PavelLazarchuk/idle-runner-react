@@ -1,6 +1,6 @@
 {
     "name": "@idle-runner/react",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "React hooks (useIdleTask, useIdleValue, useIdleCallback, useIdleEffect) to defer and time-slice non-urgent work off the main thread with requestIdleCallback — works on Safari, where it never shipped.",
     "type": "module",
     "sideEffects": false,
