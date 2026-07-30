@@ -44,12 +44,14 @@ Queues `task` when `deps` change. The work is aborted on the next deps change or
 useIdleTask(() => reportImpression(id), [id], { timeout: 2000 });
 ```
 
-| Option    | Type                       | Default  | Description                                               |
-| --------- | -------------------------- | -------- | --------------------------------------------------------- |
-| `runner`  | `IdleRunner`               | provider | Queue on a specific runner instead of the contextual one. |
-| `timeout` | `number`                   | —        | Force the task to run after this many ms, idle or not.    |
-| `enabled` | `boolean`                  | `true`   | Queue nothing while `false`.                              |
-| `onError` | `(error: unknown) => void` | —        | Receives failures. Without it, see [Errors](#errors).     |
+| Option     | Type                                                | Default          | Description                                                                                                                                                                                              |
+| ---------- | --------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runner`   | `IdleRunner`                                        | provider         | Queue on a specific runner instead of the contextual one.                                                                                                                                                |
+| `timeout`  | `number`                                            | —                | Force the task to run after this many ms, idle or not.                                                                                                                                                   |
+| `enabled`  | `boolean`                                           | `true`           | Queue nothing while `false`.                                                                                                                                                                             |
+| `onError`  | `(error: unknown) => void`                          | —                | Receives failures. Without it, see [Errors](#errors).                                                                                                                                                    |
+| `priority` | `'user-blocking' \| 'user-visible' \| 'background'` | `'user-visible'` | Forwarded to the runner's `push`. See core's [Priority](https://github.com/PavelLazarchuk/idle-runner-core#priority) docs.                                                                               |
+| `key`      | `PropertyKey`                                       | —                | Forwarded to the runner's `push`; a later call with the same key supersedes an earlier pending one. See [Deduplicating by key](https://github.com/PavelLazarchuk/idle-runner-core#deduplicating-by-key). |
 
 The task itself is always the newest closure from the last render — it is not part of `deps`.
 
@@ -69,7 +71,7 @@ useIdleChunkedTask(
 );
 ```
 
-Same options as `useIdleTask` — `runner`, `timeout`, `enabled`, `onError` — and the same abort-on-deps-change-or-unmount behavior. A `yield` is a checkpoint the runner can pause at, not a promise — the generator itself must stay synchronous.
+Same options as `useIdleTask` — `runner`, `timeout`, `enabled`, `onError`, `priority`, `key` — and the same abort-on-deps-change-or-unmount behavior. A `yield` is a checkpoint the runner can pause at, not a promise — the generator itself must stay synchronous. A `priority` change is also what lets a suspended chunked generator be parked for genuinely higher-priority work and resumed later — see core's [Priority](https://github.com/PavelLazarchuk/idle-runner-core#priority) docs.
 
 ### `useIdleValue(compute, deps, options?)`
 
@@ -88,7 +90,7 @@ const { status, value, error, refresh } = useIdleValue(() => buildIndex(items), 
 
 A deps change goes back to `pending` in the same render — the previous value is never painted next to the new deps — and abandons the in-flight computation: the result of a superseded run is never written to state. `refresh()` recomputes without a deps change and keeps a stable identity across renders.
 
-Options: `runner`, `timeout`, `enabled` (as above).
+Options: `runner`, `timeout`, `enabled`, `priority`, `key` (as above).
 
 ### `useIdleCallback(callback, options?)`
 
@@ -102,11 +104,13 @@ const track = useIdleCallback((event: ClickEvent) => sendAnalytics(event));
 
 The returned promise settles with the callback's result, so **rejections are yours to handle** at the call site. The function identity is stable across renders while always calling the newest closure.
 
-| Option           | Type         | Default  | Description                                                                      |
-| ---------------- | ------------ | -------- | -------------------------------------------------------------------------------- |
-| `runner`         | `IdleRunner` | provider | Queue on a specific runner.                                                      |
-| `timeout`        | `number`     | —        | Force the call to run after this many ms.                                        |
-| `abortOnUnmount` | `boolean`    | `false`  | Abort still-queued calls on unmount; their promises reject with an `AbortError`. |
+| Option           | Type                                                | Default          | Description                                                                                                                                                                         |
+| ---------------- | --------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runner`         | `IdleRunner`                                        | provider         | Queue on a specific runner.                                                                                                                                                         |
+| `timeout`        | `number`                                            | —                | Force the call to run after this many ms.                                                                                                                                           |
+| `abortOnUnmount` | `boolean`                                           | `false`          | Abort still-queued calls on unmount; their promises reject with an `AbortError`.                                                                                                    |
+| `priority`       | `'user-blocking' \| 'user-visible' \| 'background'` | `'user-visible'` | Forwarded to every queued call. See core's [Priority](https://github.com/PavelLazarchuk/idle-runner-core#priority) docs.                                                            |
+| `key`            | `PropertyKey`                                       | —                | Forwarded to every queued call; calling it again before an earlier call ran supersedes that one — handy for "only the latest call matters" handlers like a search box's `onChange`. |
 
 `abortOnUnmount` is off by default on purpose: work started by a click usually still wants to finish even if the component that scheduled it is gone.
 
@@ -122,7 +126,7 @@ useIdleEffect(() => {
 }, [routes]);
 ```
 
-The returned cleanup runs on the next deps change or unmount, and only if the effect body actually ran — an effect still sitting in the queue is aborted instead. Options: `runner`, `timeout`, `enabled`, `onError`.
+The returned cleanup runs on the next deps change or unmount, and only if the effect body actually ran — an effect still sitting in the queue is aborted instead. Options: `runner`, `timeout`, `enabled`, `onError`, `priority`, `key`.
 
 ### `useIdleRunner(options?)`
 

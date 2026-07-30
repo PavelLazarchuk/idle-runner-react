@@ -101,4 +101,38 @@ describe('useIdleCallback', () => {
         expect(scheduler.lastTimeout).toBeGreaterThan(490);
         expect(scheduler.lastTimeout).toBeLessThanOrEqual(500);
     });
+
+    it('forwards priority to the runner, so a user-blocking call jumps a default one', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const order: string[] = [];
+        const { result: vis } = renderHook(() => useIdleCallback(() => order.push('vis')), {
+            wrapper: withRunner(runner),
+        });
+        const { result: urgent } = renderHook(
+            () => useIdleCallback(() => order.push('urgent'), { priority: 'user-blocking' }),
+            { wrapper: withRunner(runner) }
+        );
+
+        void vis.current();
+        void urgent.current();
+        await runSlice(scheduler);
+        expect(order).toEqual(['urgent', 'vis']);
+    });
+
+    it('forwards key so calling it again before it runs supersedes the earlier call', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const { result } = renderHook(
+            () => useIdleCallback((label: string) => label, { key: 'call' }),
+            { wrapper: withRunner(runner) }
+        );
+
+        const first = result.current('first');
+        first.catch(() => {});
+        const second = result.current('second');
+
+        expect(runner.size).toBe(1);
+        await runSlice(scheduler);
+        await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+        await expect(second).resolves.toBe('second');
+    });
 });

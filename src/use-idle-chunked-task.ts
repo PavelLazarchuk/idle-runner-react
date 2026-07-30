@@ -1,5 +1,5 @@
 import { useEffect, type DependencyList } from 'react';
-import type { IdleRunner } from '@idle-runner/core';
+import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 
 import { useResolvedRunner } from './context';
 import { reportTaskError, useLatest } from './internal';
@@ -9,6 +9,8 @@ export interface UseIdleChunkedTaskOptions {
     timeout?: number;
     enabled?: boolean;
     onError?: (error: unknown) => void;
+    priority?: TaskPriority;
+    key?: PropertyKey;
 }
 
 /**
@@ -30,7 +32,7 @@ export function useIdleChunkedTask(
     deps: DependencyList,
     options: UseIdleChunkedTaskOptions = {}
 ): void {
-    const { runner: explicitRunner, timeout, enabled = true, onError } = options;
+    const { runner: explicitRunner, timeout, enabled = true, onError, priority, key } = options;
     const runner = useResolvedRunner(explicitRunner);
     const taskRef = useLatest(task);
     const onErrorRef = useLatest(onError);
@@ -45,10 +47,10 @@ export function useIdleChunkedTask(
         }
 
         runner
-            .pushChunked(bridge(), { signal: controller.signal, timeout })
+            .pushChunked(bridge(), { signal: controller.signal, timeout, priority, key })
             .catch(error => reportTaskError(error, onErrorRef.current));
 
         return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [runner, enabled, timeout, ...deps]);
+    }, [runner, enabled, timeout, priority, key, ...deps]);
 }

@@ -1,5 +1,5 @@
 import { useEffect, type DependencyList } from 'react';
-import type { IdleRunner } from '@idle-runner/core';
+import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 
 import { useResolvedRunner } from './context';
 import { reportTaskError, useLatest } from './internal';
@@ -11,6 +11,8 @@ export interface UseIdleEffectOptions {
     timeout?: number;
     enabled?: boolean;
     onError?: (error: unknown) => void;
+    priority?: TaskPriority;
+    key?: PropertyKey;
 }
 
 /**
@@ -33,7 +35,7 @@ export function useIdleEffect(
     deps: DependencyList,
     options: UseIdleEffectOptions = {}
 ): void {
-    const { runner: explicitRunner, timeout, enabled = true, onError } = options;
+    const { runner: explicitRunner, timeout, enabled = true, onError, priority, key } = options;
     const runner = useResolvedRunner(explicitRunner);
     const effectRef = useLatest(effect);
     const onErrorRef = useLatest(onError);
@@ -49,7 +51,7 @@ export function useIdleEffect(
                 () => {
                     cleanup = effectRef.current();
                 },
-                { signal: controller.signal, timeout }
+                { signal: controller.signal, timeout, priority, key }
             )
             .catch(error => reportTaskError(error, onErrorRef.current));
 
@@ -60,5 +62,5 @@ export function useIdleEffect(
             dispose?.();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [runner, enabled, timeout, ...deps]);
+    }, [runner, enabled, timeout, priority, key, ...deps]);
 }

@@ -17,4 +17,9 @@ export type {
 } from './use-idle-value';
 export type { UseIdleCallbackOptions } from './use-idle-callback';
 export type { IdleEffectCleanup, UseIdleEffectOptions } from './use-idle-effect';
-export type { IdleRunner, IdleRunnerOptions, IdleTaskOptions } from '@idle-runner/core';
+export type {
+    IdleRunner,
+    IdleRunnerOptions,
+    IdleTaskOptions,
+    TaskPriority,
+} from '@idle-runner/core';

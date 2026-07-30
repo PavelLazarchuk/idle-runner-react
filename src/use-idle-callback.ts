@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { IdleRunner } from '@idle-runner/core';
+import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 
 import { useResolvedRunner } from './context';
 import { useLatest } from './internal';
@@ -8,6 +8,8 @@ export interface UseIdleCallbackOptions {
     runner?: IdleRunner;
     timeout?: number;
     abortOnUnmount?: boolean;
+    priority?: TaskPriority;
+    key?: PropertyKey;
 }
 
 /**
@@ -26,7 +28,7 @@ export function useIdleCallback<A extends unknown[], T>(
     callback: (...args: A) => T,
     options: UseIdleCallbackOptions = {}
 ): (...args: A) => Promise<T> {
-    const { runner: explicitRunner, timeout, abortOnUnmount = false } = options;
+    const { runner: explicitRunner, timeout, abortOnUnmount = false, priority, key } = options;
     const runner = useResolvedRunner(explicitRunner);
     const callbackRef = useLatest(callback);
     const abortOnUnmountRef = useLatest(abortOnUnmount);
@@ -50,8 +52,13 @@ export function useIdleCallback<A extends unknown[], T>(
                 signal = controllerRef.current.signal;
             }
 
-            return runner.push(() => callbackRef.current(...args), { signal, timeout });
+            return runner.push(() => callbackRef.current(...args), {
+                signal,
+                timeout,
+                priority,
+                key,
+            });
         },
-        [runner, timeout, abortOnUnmount, callbackRef]
+        [runner, timeout, abortOnUnmount, priority, key, callbackRef]
     );
 }

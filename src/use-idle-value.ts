@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type DependencyList } from 'react';
-import type { IdleRunner } from '@idle-runner/core';
+import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 
 import { useResolvedRunner } from './context';
 import { isAbortError, useLatest } from './internal';
@@ -20,6 +20,8 @@ export interface UseIdleValueOptions {
     runner?: IdleRunner;
     timeout?: number;
     enabled?: boolean;
+    priority?: TaskPriority;
+    key?: PropertyKey;
 }
 
 const IDLE_STATE = { status: 'idle', value: undefined, error: undefined } as const;
@@ -46,12 +48,12 @@ export function useIdleValue<T>(
     deps: DependencyList,
     options: UseIdleValueOptions = {}
 ): UseIdleValueResult<T> {
-    const { runner: explicitRunner, timeout, enabled = true } = options;
+    const { runner: explicitRunner, timeout, enabled = true, priority, key } = options;
     const runner = useResolvedRunner(explicitRunner);
     const computeRef = useLatest(compute);
     const [nonce, setNonce] = useState(0);
     const [state, setState] = useState<IdleValueState<T>>(enabled ? PENDING_STATE : IDLE_STATE);
-    const inputs: unknown[] = [runner, enabled, timeout, nonce, ...deps];
+    const inputs: unknown[] = [runner, enabled, timeout, priority, key, nonce, ...deps];
     const [lastInputs, setLastInputs] = useState(inputs);
 
     if (!sameInputs(lastInputs, inputs)) {
@@ -70,7 +72,7 @@ export function useIdleValue<T>(
         const controller = new AbortController();
 
         runner
-            .push(() => computeRef.current(), { signal: controller.signal, timeout })
+            .push(() => computeRef.current(), { signal: controller.signal, timeout, priority, key })
             .then(
                 value => {
                     if (!controller.signal.aborted) {
@@ -86,7 +88,7 @@ export function useIdleValue<T>(
 
         return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [runner, enabled, timeout, nonce, ...deps]);
+    }, [runner, enabled, timeout, priority, key, nonce, ...deps]);
 
     const refresh = useCallback(() => setNonce(current => current + 1), []);
 

@@ -155,4 +155,65 @@ describe('useIdleChunkedTask', () => {
         await runSlice(scheduler);
         expect(seen).toEqual([2]);
     });
+
+    it('forwards priority to the runner, so a user-blocking generator jumps a default one', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const order: string[] = [];
+
+        renderHook(
+            () =>
+                useIdleChunkedTask(function* () {
+                    order.push('vis');
+                }, []),
+            { wrapper: withRunner(runner) }
+        );
+        renderHook(
+            () =>
+                useIdleChunkedTask(
+                    function* () {
+                        order.push('urgent');
+                    },
+                    [],
+                    { priority: 'user-blocking' }
+                ),
+            { wrapper: withRunner(runner) }
+        );
+
+        await runSlice(scheduler);
+        expect(order).toEqual(['urgent', 'vis']);
+    });
+
+    it('forwards key so a later push supersedes an earlier pending one with the same key', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const onError = vi.fn();
+        const order: string[] = [];
+
+        renderHook(
+            () =>
+                useIdleChunkedTask(
+                    function* () {
+                        order.push('first');
+                    },
+                    [],
+                    { key: 'shared', onError }
+                ),
+            { wrapper: withRunner(runner) }
+        );
+        renderHook(
+            () =>
+                useIdleChunkedTask(
+                    function* () {
+                        order.push('second');
+                    },
+                    [],
+                    { key: 'shared' }
+                ),
+            { wrapper: withRunner(runner) }
+        );
+
+        expect(runner.size).toBe(1);
+        await runSlice(scheduler);
+        expect(order).toEqual(['second']);
+        expect(onError).not.toHaveBeenCalled();
+    });
 });

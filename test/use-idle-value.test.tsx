@@ -127,4 +127,36 @@ describe('useIdleValue', () => {
         expect(scheduler.pending).toBe(0);
         expect(runner.size).toBe(0);
     });
+
+    it('forwards priority to the runner, so a user-blocking compute jumps a default one', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const order: string[] = [];
+        renderHook(() => useIdleValue(() => order.push('vis'), []), {
+            wrapper: withRunner(runner),
+        });
+        renderHook(
+            () => useIdleValue(() => order.push('urgent'), [], { priority: 'user-blocking' }),
+            { wrapper: withRunner(runner) }
+        );
+
+        await runSlice(scheduler);
+        expect(order).toEqual(['urgent', 'vis']);
+    });
+
+    it('forwards key so a later compute supersedes an earlier pending one with the same key', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const { result: first } = renderHook(
+            () => useIdleValue(() => 'first', [], { key: 'shared' }),
+            { wrapper: withRunner(runner) }
+        );
+        const { result: second } = renderHook(
+            () => useIdleValue(() => 'second', [], { key: 'shared' }),
+            { wrapper: withRunner(runner) }
+        );
+
+        expect(runner.size).toBe(1);
+        await runSlice(scheduler);
+        expect(second.current).toMatchObject({ status: 'success', value: 'second' });
+        expect(first.current.status).toBe('pending');
+    });
 });
