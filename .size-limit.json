@@ -1,0 +1,28 @@
+[
+    {
+        "name": "ESM, everything (incl. @idle-runner/core)",
+        "path": "dist/index.js",
+        "ignore": ["react", "react-dom"],
+        "limit": "4 kB"
+    },
+    {
+        "name": "ESM, useIdleTask only",
+        "path": "dist/index.js",
+        "import": "{ useIdleTask }",
+        "ignore": ["react", "react-dom"],
+        "limit": "3.2 kB"
+    },
+    {
+        "name": "ESM, useIdleValue only",
+        "path": "dist/index.js",
+        "import": "{ useIdleValue }",
+        "ignore": ["react", "react-dom"],
+        "limit": "3.4 kB"
+    },
+    {
+        "name": "CJS, everything (incl. @idle-runner/core)",
+        "path": "dist/index.cjs",
+        "ignore": ["react", "react-dom"],
+        "limit": "4.3 kB"
+    }
+]
