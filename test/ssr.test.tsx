@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { IdleRunner } from '@idle-runner/core';
-import { IdleRunnerProvider, useIdleTask, useIdleValue } from '../src/index';
+import { Defer, IdleRunnerProvider, useIdleTask, useIdleValue } from '../src/index';
 import { FakeScheduler } from './fake-scheduler';
 
 describe('SSR', () => {
@@ -28,6 +28,25 @@ describe('SSR', () => {
         expect(task).not.toHaveBeenCalled();
         expect(compute).not.toHaveBeenCalled();
         expect(scheduler.pending).toBe(0);
+        expect(runner.size).toBe(0);
+    });
+
+    it('renders the fallback of a Defer, so the client hydrates the same tree', () => {
+        const scheduler = new FakeScheduler();
+        const runner = new IdleRunner({ scheduler, flushOnHidden: false });
+        const Heavy = vi.fn(() => <span>chart</span>);
+
+        const html = renderToString(
+            <IdleRunnerProvider runner={runner}>
+                <Defer fallback={<span>skeleton</span>}>
+                    <Heavy />
+                </Defer>
+            </IdleRunnerProvider>
+        );
+
+        expect(html).toContain('skeleton');
+        expect(html).not.toContain('chart');
+        expect(Heavy).not.toHaveBeenCalled();
         expect(runner.size).toBe(0);
     });
 

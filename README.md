@@ -71,6 +71,27 @@ useIdleChunkedTask(
 );
 ```
 
+Whatever the generator yields is reported to `onProgress`, which is how a chunked task drives a progress bar without a second mechanism:
+
+```tsx
+const [done, setDone] = useState(0);
+
+useIdleChunkedTask(
+    function* () {
+        for (const [index, item] of items.entries()) {
+            processItem(item);
+            yield index + 1;
+        }
+    },
+    [items],
+    { onProgress: setDone }
+);
+
+return <progress value={done} max={items.length} />;
+```
+
+`onProgress` is read through a ref like `onError`, so an inline arrow never re-queues the task, and a throw inside it is warned about rather than failing the task it reports on.
+
 Same options as `useIdleTask` — `runner`, `timeout`, `enabled`, `onError`, `priority`, `key` — and the same abort-on-deps-change-or-unmount behavior. A `yield` is a checkpoint the runner can pause at, not a promise — the generator itself must stay synchronous. A `priority` change is also what lets a suspended chunked generator be parked for genuinely higher-priority work and resumed later — see core's [Priority](https://github.com/PavelLazarchuk/idle-runner-core#priority) docs.
 
 ### `useIdleValue(compute, deps, options?)`
@@ -91,6 +112,28 @@ const { status, value, error, refresh } = useIdleValue(() => buildIndex(items), 
 A deps change goes back to `pending` in the same render — the previous value is never painted next to the new deps — and abandons the in-flight computation: the result of a superseded run is never written to state. `refresh()` recomputes without a deps change and keeps a stable identity across renders.
 
 Options: `runner`, `timeout`, `enabled`, `priority`, `key` (as above).
+
+### `useIdleMount(options?)` and `<Defer>`
+
+`false` until the page goes idle, then `true` — for a subtree heavy enough that mounting it belongs after the first paint rather than in it:
+
+```tsx
+const ready = useIdleMount({ timeout: 2000 });
+
+return ready ? <HeavyChart data={data} /> : <ChartSkeleton />;
+```
+
+`<Defer>` is the same thing as a component, when the deferred thing is a subtree rather than a decision:
+
+```tsx
+<Defer fallback={<ChartSkeleton />} timeout={2000}>
+    <HeavyChart data={data} />
+</Defer>
+```
+
+Options: `runner`, `timeout`, `enabled`, `priority`. It flips once and never flips back — a subtree that has mounted stays mounted, because unmounting it would throw away the work that was being deferred. On the server and in the first client render it is `false`, so the fallback is what hydrates and there is no mismatch. `timeout` is the deadline by which the content mounts even if the page never goes idle; without one, a page that stays busy forever never mounts it.
+
+Note that `<Defer>` still creates the `children` element on every render — cheap, since what is being deferred is mounting and rendering that tree, not describing it. Where even creating the element is too expensive, use `useIdleMount` and branch before the element exists.
 
 ### `useIdleCallback(callback, options?)`
 

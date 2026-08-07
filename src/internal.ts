@@ -1,5 +1,15 @@
 import { useEffect, useRef } from 'react';
 
+declare const process: { env?: { NODE_ENV?: string } } | undefined;
+
+export function devWarn(message: string): void {
+    const isDev = typeof process === 'undefined' || process?.env?.NODE_ENV !== 'production';
+
+    if (isDev && typeof console !== 'undefined') {
+        console.warn(`idle-runner/react: ${message}`);
+    }
+}
+
 export function isAbortError(error: unknown): boolean {
     return (error as { name?: unknown } | null)?.name === 'AbortError';
 }

@@ -5,10 +5,14 @@ export { useIdleChunkedTask } from './use-idle-chunked-task';
 export { useIdleValue } from './use-idle-value';
 export { useIdleCallback } from './use-idle-callback';
 export { useIdleEffect } from './use-idle-effect';
+export { useIdleMount } from './use-idle-mount';
+export { Defer } from './defer';
 
 export type { IdleRunnerProviderProps } from './context';
 export type { UseIdleTaskOptions } from './use-idle-task';
 export type { UseIdleChunkedTaskOptions } from './use-idle-chunked-task';
+export type { UseIdleMountOptions } from './use-idle-mount';
+export type { DeferProps } from './defer';
 export type {
     IdleValueStatus,
     IdleValueState,

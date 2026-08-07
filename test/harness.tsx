@@ -10,9 +10,12 @@ export function createTestRunner(): { runner: IdleRunner; scheduler: FakeSchedul
     return { scheduler, runner: new IdleRunner({ scheduler, flushOnHidden: false }) };
 }
 
-export async function runSlice(scheduler: FakeScheduler): Promise<void> {
+export async function runSlice(
+    scheduler: FakeScheduler,
+    remaining?: number | (() => number)
+): Promise<void> {
     await act(async () => {
-        scheduler.fireSlice();
+        scheduler.fireSlice(remaining);
     });
 }
 

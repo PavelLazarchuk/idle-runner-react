@@ -2,15 +2,16 @@ import { useEffect, type DependencyList } from 'react';
 import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 
 import { useResolvedRunner } from './context';
-import { reportTaskError, useLatest } from './internal';
+import { devWarn, reportTaskError, useLatest } from './internal';
 
-export interface UseIdleChunkedTaskOptions {
+export interface UseIdleChunkedTaskOptions<P = unknown> {
     runner?: IdleRunner;
     timeout?: number;
     enabled?: boolean;
     onError?: (error: unknown) => void;
     priority?: TaskPriority;
     key?: PropertyKey;
+    onProgress?: (value: P) => void;
 }
 
 /**
@@ -26,24 +27,61 @@ export interface UseIdleChunkedTaskOptions {
  *     }
  * }, [items]);
  * ```
+ *
+ * Yielded values are reported to `onProgress`, which turns `yield` into a progress
+ * channel:
+ *
+ * ```tsx
+ * const [done, setDone] = useState(0);
+ *
+ * useIdleChunkedTask(function* () {
+ *     for (const [index, item] of items.entries()) {
+ *         processItem(item);
+ *         yield index + 1;
+ *     }
+ * }, [items], { onProgress: setDone });
+ * ```
  */
-export function useIdleChunkedTask(
-    task: () => Generator<unknown, unknown, unknown>,
+export function useIdleChunkedTask<P = unknown>(
+    task: () => Generator<P, unknown, unknown>,
     deps: DependencyList,
-    options: UseIdleChunkedTaskOptions = {}
+    options: UseIdleChunkedTaskOptions<P> = {}
 ): void {
-    const { runner: explicitRunner, timeout, enabled = true, onError, priority, key } = options;
+    const {
+        runner: explicitRunner,
+        timeout,
+        enabled = true,
+        onError,
+        priority,
+        key,
+        onProgress,
+    } = options;
     const runner = useResolvedRunner(explicitRunner);
     const taskRef = useLatest(task);
     const onErrorRef = useLatest(onError);
+    const onProgressRef = useLatest(onProgress);
 
     useEffect(() => {
         if (!enabled) return;
 
         const controller = new AbortController();
 
-        function* bridge(): Generator<unknown, unknown, unknown> {
-            return yield* taskRef.current();
+        function* bridge(): Generator<P, unknown, unknown> {
+            const generator = taskRef.current();
+
+            try {
+                let step = generator.next();
+
+                while (!step.done) {
+                    reportProgress(step.value, onProgressRef.current);
+                    yield step.value;
+                    step = generator.next();
+                }
+
+                return step.value;
+            } finally {
+                generator.return?.(undefined);
+            }
         }
 
         runner
@@ -53,4 +91,14 @@ export function useIdleChunkedTask(
         return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [runner, enabled, timeout, priority, key, ...deps]);
+}
+
+function reportProgress<P>(value: P, onProgress: ((value: P) => void) | undefined): void {
+    if (!onProgress) return;
+
+    try {
+        onProgress(value);
+    } catch {
+        devWarn('onProgress threw');
+    }
 }

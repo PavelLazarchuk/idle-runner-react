@@ -183,6 +183,113 @@ describe('useIdleChunkedTask', () => {
         expect(order).toEqual(['urgent', 'vis']);
     });
 
+    it('reports every yielded value to onProgress, and not the return value', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const seen: number[] = [];
+
+        renderHook(
+            () =>
+                useIdleChunkedTask(
+                    function* () {
+                        yield 1;
+                        yield 2;
+
+                        return 3;
+                    },
+                    [],
+                    { onProgress: value => seen.push(value) }
+                ),
+            { wrapper: withRunner(runner) }
+        );
+
+        await runSlice(scheduler);
+        expect(seen).toEqual([1, 2]);
+    });
+
+    it('uses the newest onProgress without re-queueing the task', async () => {
+        const { runner, scheduler } = createTestRunner();
+        const first = vi.fn();
+        const second = vi.fn();
+        const { rerender } = renderHook(
+            ({ onProgress }: { onProgress: (value: number) => void }) =>
+                useIdleChunkedTask(
+                    function* () {
+                        yield 1;
+                    },
+                    [],
+                    { onProgress }
+                ),
+            { wrapper: withRunner(runner), initialProps: { onProgress: first } }
+        );
+
+        rerender({ onProgress: second });
+        await runSlice(scheduler);
+
+        expect(first).not.toHaveBeenCalled();
+        expect(second).toHaveBeenCalledWith(1);
+    });
+
+    it('a throwing onProgress warns but does not fail the task', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const { runner, scheduler } = createTestRunner();
+        const onError = vi.fn();
+        const finished = vi.fn();
+
+        renderHook(
+            () =>
+                useIdleChunkedTask(
+                    function* () {
+                        yield 1;
+                        finished();
+                    },
+                    [],
+                    {
+                        onError,
+                        onProgress: () => {
+                            throw new Error('reporting blew up');
+                        },
+                    }
+                ),
+            { wrapper: withRunner(runner) }
+        );
+
+        await runSlice(scheduler);
+
+        expect(finished).toHaveBeenCalled();
+        expect(onError).not.toHaveBeenCalled();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('onProgress threw'));
+        warn.mockRestore();
+    });
+
+    it("runs the generator's own finally when an unmount aborts it mid-flight", async () => {
+        const { runner, scheduler } = createTestRunner();
+        const steps: number[] = [];
+        let cleanedUp = false;
+        const { unmount } = renderHook(
+            () =>
+                useIdleChunkedTask(function* () {
+                    try {
+                        steps.push(1);
+                        yield 1;
+                        steps.push(2);
+                        yield 2;
+                    } finally {
+                        cleanedUp = true;
+                    }
+                }, []),
+            { wrapper: withRunner(runner) }
+        );
+
+        const sequence = [20, 14, 4];
+        await runSlice(scheduler, () => sequence.shift() ?? 0);
+
+        expect(steps).toEqual([1]);
+        expect(cleanedUp).toBe(false);
+
+        unmount();
+        expect(cleanedUp).toBe(true);
+    });
+
     it('forwards key so a later push supersedes an earlier pending one with the same key', async () => {
         const { runner, scheduler } = createTestRunner();
         const onError = vi.fn();

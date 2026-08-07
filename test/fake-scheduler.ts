@@ -27,9 +27,11 @@ export class FakeScheduler implements SchedulerAdapter {
         return this.live.size;
     }
 
-    fireSlice(remaining = 50): void {
+    fireSlice(remaining: number | (() => number) = 50): void {
         const request = this.takeOldest();
-        request.callback({ didTimeout: false, timeRemaining: () => remaining });
+        const timeRemaining = typeof remaining === 'function' ? remaining : () => remaining;
+
+        request.callback({ didTimeout: false, timeRemaining });
     }
 
     fireTimeout(): void {
