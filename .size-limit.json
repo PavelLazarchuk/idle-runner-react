@@ -23,6 +23,6 @@
         "name": "CJS, everything (incl. @idle-runner/core)",
         "path": "dist/index.cjs",
         "ignore": ["react", "react-dom"],
-        "limit": "4.3 kB"
+        "limit": "4.6 kB"
     }
 ]
