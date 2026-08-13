@@ -4,6 +4,18 @@ import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 import { useResolvedRunner } from './context';
 import { useLatest } from './internal';
 
+function noop(): void {}
+
+function ignoreAbortRejection(promise: Promise<unknown>, signal: AbortSignal): void {
+    if (signal.aborted) {
+        promise.catch(noop);
+
+        return;
+    }
+
+    signal.addEventListener('abort', () => promise.catch(noop), { once: true });
+}
+
 export interface UseIdleCallbackOptions {
     runner?: IdleRunner;
     timeout?: number;
@@ -22,7 +34,10 @@ export interface UseIdleCallbackOptions {
  * ```
  *
  * The returned promise settles with the callback's result; rejections belong to the
- * caller, so handle them where you call it.
+ * caller, so handle them where you call it. The exception is the `AbortError` from
+ * `abortOnUnmount`, which the hook causes rather than the caller: the promise still
+ * rejects with it, but a fire-and-forget call is not reported as an unhandled
+ * rejection for unmounting.
  */
 export function useIdleCallback<A extends unknown[], T>(
     callback: (...args: A) => T,
@@ -52,12 +67,16 @@ export function useIdleCallback<A extends unknown[], T>(
                 signal = controllerRef.current.signal;
             }
 
-            return runner.push(() => callbackRef.current(...args), {
+            const promise = runner.push(() => callbackRef.current(...args), {
                 signal,
                 timeout,
                 priority,
                 key,
             });
+
+            if (signal) ignoreAbortRejection(promise, signal);
+
+            return promise;
         },
         [runner, timeout, abortOnUnmount, priority, key, callbackRef]
     );

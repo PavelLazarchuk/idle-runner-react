@@ -76,6 +76,27 @@ describe('useIdleCallback', () => {
         await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     });
 
+    it('leaves no unhandled rejection when a fire-and-forget call is aborted', async () => {
+        const seen: unknown[] = [];
+        const onUnhandled = (reason: unknown) => seen.push(reason);
+        process.on('unhandledRejection', onUnhandled);
+
+        try {
+            const { runner } = createTestRunner();
+            const { result, unmount } = renderHook(
+                () => useIdleCallback(() => 'done', { abortOnUnmount: true }),
+                { wrapper: withRunner(runner) }
+            );
+
+            result.current();
+            unmount();
+            await new Promise(resolve => setTimeout(resolve, 0));
+            expect(seen).toEqual([]);
+        } finally {
+            process.off('unhandledRejection', onUnhandled);
+        }
+    });
+
     it('keeps in-flight calls alive when abortOnUnmount is turned off', async () => {
         const { runner, scheduler } = createTestRunner();
         const { result, rerender } = renderHook(

@@ -66,6 +66,25 @@ describe('useIdleMount', () => {
         expect(scheduler.pending).toBe(0);
     });
 
+    it('stays false on a clear(reason) instead of rethrowing it at the app', async () => {
+        const seen: unknown[] = [];
+        const onUncaught = (error: unknown) => seen.push(error);
+        process.on('uncaughtException', onUncaught);
+
+        try {
+            const { runner } = createTestRunner();
+            const { result } = renderHook(() => useIdleMount(), { wrapper: withRunner(runner) });
+
+            runner.clear(new Error('shutting down'));
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            expect(seen).toEqual([]);
+            expect(result.current).toBe(false);
+        } finally {
+            process.off('uncaughtException', onUncaught);
+        }
+    });
+
     it('a user-blocking mount goes ahead of default work', async () => {
         const { runner, scheduler } = createTestRunner();
         const order: string[] = [];

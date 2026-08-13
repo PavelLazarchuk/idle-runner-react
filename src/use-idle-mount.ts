@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { IdleRunner, TaskPriority } from '@idle-runner/core';
 
 import { useResolvedRunner } from './context';
-import { reportTaskError } from './internal';
 
 export interface UseIdleMountOptions {
     runner?: IdleRunner;
@@ -42,7 +41,7 @@ export function useIdleMount(options: UseIdleMountOptions = {}): boolean {
             .push(() => undefined, { signal: controller.signal, timeout, priority })
             .then(
                 () => setReady(true),
-                error => reportTaskError(error, undefined)
+                () => {}
             );
 
         return () => controller.abort();
