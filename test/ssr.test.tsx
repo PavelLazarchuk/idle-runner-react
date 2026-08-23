@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { IdleRunner } from '@idle-runner/core';
-import { Defer, IdleRunnerProvider, useIdleTask, useIdleValue } from '../src/index';
+import {
+    Defer,
+    IdleRunnerProvider,
+    useIdleImport,
+    useIdlePrefetch,
+    useIdleTask,
+    useIdleValue,
+} from '../src/index';
 import { FakeScheduler } from './fake-scheduler';
 
 describe('SSR', () => {
@@ -47,6 +54,30 @@ describe('SSR', () => {
         expect(html).toContain('skeleton');
         expect(html).not.toContain('chart');
         expect(Heavy).not.toHaveBeenCalled();
+        expect(runner.size).toBe(0);
+    });
+
+    it('neither imports nor prefetches on the server, where there is no document', () => {
+        const scheduler = new FakeScheduler();
+        const runner = new IdleRunner({ scheduler, flushOnHidden: false });
+        const load = vi.fn(async () => ({ default: 'editor' }));
+
+        function Probe() {
+            const { status } = useIdleImport(load);
+            useIdlePrefetch(['/next', '/after']);
+
+            return <span>{status}</span>;
+        }
+
+        const html = renderToString(
+            <IdleRunnerProvider runner={runner}>
+                <Probe />
+            </IdleRunnerProvider>
+        );
+
+        expect(html).toContain('pending');
+        expect(load).not.toHaveBeenCalled();
+        expect(scheduler.pending).toBe(0);
         expect(runner.size).toBe(0);
     });
 

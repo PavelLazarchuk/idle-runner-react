@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderHook, waitFor } from '@testing-library/react';
-import { useIdleCallback, useIdleEffect, useIdleTask, useIdleValue } from '../../src/index';
+import {
+    useIdleCallback,
+    useIdleEffect,
+    useIdleImport,
+    useIdlePrefetch,
+    useIdleTask,
+    useIdleValue,
+} from '../../src/index';
 
 describe('hooks against the real browser scheduler', () => {
     it('runs a task off the render path', async () => {
@@ -58,6 +65,39 @@ describe('hooks against the real browser scheduler', () => {
             await waitFor(() => expect(task).toHaveBeenCalledTimes(1), { timeout: 3000 });
         } finally {
             clearInterval(interval);
+        }
+    });
+});
+
+describe('useIdleImport and useIdlePrefetch against the real browser', () => {
+    it('resolves a real dynamic import into state', async () => {
+        const { result } = renderHook(() => useIdleImport(() => import('./fixtures/answer')));
+
+        expect(result.current.status).toBe('pending');
+        await waitFor(() => expect(result.current.status).toBe('success'));
+        expect(result.current.value?.answer).toBe(42);
+    });
+
+    it('warms a url through whichever mechanism this browser has', async () => {
+        const url = `/idle-runner-prefetch-${Date.now()}.txt`;
+        const requested: string[] = [];
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+            requested.push(String(input));
+
+            return originalFetch(input, init);
+        }) as typeof fetch;
+
+        try {
+            renderHook(() => useIdlePrefetch(url, { as: 'fetch' }));
+
+            await waitFor(() => {
+                const link = document.head.querySelector(`link[rel="prefetch"][href$="${url}"]`);
+
+                expect(Boolean(link) || requested.some(entry => entry.endsWith(url))).toBe(true);
+            });
+        } finally {
+            globalThis.fetch = originalFetch;
         }
     });
 });

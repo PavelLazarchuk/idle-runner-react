@@ -113,6 +113,47 @@ A deps change goes back to `pending` in the same render — the previous value i
 
 Options: `runner`, `timeout`, `enabled`, `priority`, `key` (as above).
 
+### `useIdleImport(load, options?)`
+
+Starts a dynamic `import()` in an idle slice and reports the module as state — for a chunk the page will probably need next, fetched and evaluated while nothing is competing for the main thread instead of at the click that needs it:
+
+```tsx
+const { status, value } = useIdleImport(() => import('./HeavyEditor'));
+const Editor = value?.default;
+
+return Editor ? <Editor /> : <EditorSkeleton />;
+```
+
+The `status` values are `useIdleValue`'s, and `value` is the module namespace. What the runner defers is the **call** to `import()`, not the network round trip: the task is done the moment the import starts, so `runner.size` goes back to `0` while `status` is still `'pending'`. That is the point — parsing and evaluating a chunk is main-thread work, and this keeps it out of an interaction.
+
+`load` is read fresh on every render but only ever called once, so an inline arrow is the expected way to write it. A chunk that fails to load lands in `status: 'error'`; `refresh()` retries it, which is the recovery path for a chunk that 404'd after a deploy.
+
+Options: `runner`, `timeout`, `enabled`, `priority`, `key` (as above).
+
+### `useIdlePrefetch(url, options?)`
+
+Warms the cache for URLs the page will probably need next:
+
+```tsx
+useIdlePrefetch(nextPage?.href, { as: 'document' });
+useIdlePrefetch(
+    visibleProducts.map(product => product.imageUrl),
+    { as: 'image' }
+);
+```
+
+Takes one URL, an array of them, or `null` for "nothing to prefetch yet" — nothing is queued until there is. Injects `<link rel="prefetch">` where the browser supports it and falls back to a low-priority `fetch` where it does not, which is Safari: `rel="prefetch"` has never shipped there either. Each URL is warmed once per document however many components ask for it, and a URL still queued when the component unmounts is dropped rather than fetched.
+
+| Option            | Type                                                | Default        | Description                                                                                                       |
+| ----------------- | --------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `as`              | `'document' \| 'image' \| 'script' \| 'style' \| …` | —              | The `as` attribute of the link, so the browser fetches with the right priority and stores it under the right key. |
+| `crossOrigin`     | `'anonymous' \| 'use-credentials'`                  | —              | Required for fonts, and for any resource the real request will send credentials with.                             |
+| `respectSaveData` | `boolean`                                           | `true`         | Skip prefetching entirely on a metered or 2g connection.                                                          |
+| `onError`         | `(error: unknown) => void`                          | —              | A failed prefetch is silent by default; this is the only way to hear about one.                                   |
+| `priority`        | `'user-blocking' \| 'user-visible' \| 'background'` | `'background'` | Lower than the other hooks default to — a prefetch should be the last thing in the queue, not the first.          |
+
+Also takes `runner`, `timeout` and `enabled`. Nothing is prefetched on the server.
+
 ### `useIdleMount(options?)` and `<Defer>`
 
 `false` until the page goes idle, then `true` — for a subtree heavy enough that mounting it belongs after the first paint rather than in it:
@@ -223,13 +264,13 @@ Without `onError`, a failure is rethrown out of band rather than swallowed into 
 
 Same rules as the core package: this defers work on the main thread, it does not offload it.
 
-**Good fits** — prefetching, warming caches and derived indexes, analytics flushes, hydrating below-the-fold widgets.
+**Good fits** — prefetching routes and chunks (`useIdlePrefetch`, `useIdleImport`), warming caches and derived indexes, analytics flushes, hydrating below-the-fold widgets.
 
 **Bad fits:**
 
 - ❌ **Anything the next paint depends on.** Deferring the total the user is watching makes INP worse, not better.
 - ❌ **Genuinely heavy, parallelizable work** — a 200ms computation is still 200ms. Chunk it with `useIdleChunkedTask`, or move it to a Web Worker.
-- ❌ **Data fetching.** These hooks queue synchronous work; a promise returned from a task is a value the runner resolves with, not something it waits on.
+- ❌ **Data fetching.** These hooks queue synchronous work; a promise returned from a task is a value the runner resolves with, not something it waits on. `useIdleImport` and `useIdlePrefetch` are the deliberate exceptions — they defer the _start_ of a load whose result nothing on screen is waiting for.
 
 ## Tests
 

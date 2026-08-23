@@ -1,28 +1,48 @@
 [
     {
-        "name": "ESM, everything (incl. @idle-runner/core)",
+        "name": "@idle-runner/react",
         "path": "dist/index.js",
         "ignore": ["react", "react-dom"],
-        "limit": "4 kB"
+        "limit": "5.3 kB",
+        "gzip": true
     },
     {
-        "name": "ESM, useIdleTask only",
+        "name": "@idle-runner/react (cjs)",
+        "path": "dist/index.cjs",
+        "ignore": ["react", "react-dom"],
+        "limit": "6.0 kB",
+        "gzip": true
+    },
+    {
+        "name": "tree-shaking: { useIdleTask } only",
         "path": "dist/index.js",
         "import": "{ useIdleTask }",
         "ignore": ["react", "react-dom"],
-        "limit": "3.2 kB"
+        "limit": "3.55 kB",
+        "gzip": true
     },
     {
-        "name": "ESM, useIdleValue only",
+        "name": "tree-shaking: { useIdleValue } only",
         "path": "dist/index.js",
         "import": "{ useIdleValue }",
         "ignore": ["react", "react-dom"],
-        "limit": "3.4 kB"
+        "limit": "3.8 kB",
+        "gzip": true
     },
     {
-        "name": "CJS, everything (incl. @idle-runner/core)",
-        "path": "dist/index.cjs",
+        "name": "tree-shaking: { useIdleImport } only",
+        "path": "dist/index.js",
+        "import": "{ useIdleImport }",
         "ignore": ["react", "react-dom"],
-        "limit": "4.6 kB"
+        "limit": "3.8 kB",
+        "gzip": true
+    },
+    {
+        "name": "tree-shaking: { useIdlePrefetch } only",
+        "path": "dist/index.js",
+        "import": "{ useIdlePrefetch }",
+        "ignore": ["react", "react-dom"],
+        "limit": "4.0 kB",
+        "gzip": true
     }
 ]

@@ -3,6 +3,8 @@ export { useIdleRunner } from './use-idle-runner';
 export { useIdleTask } from './use-idle-task';
 export { useIdleChunkedTask } from './use-idle-chunked-task';
 export { useIdleValue } from './use-idle-value';
+export { useIdleImport } from './use-idle-import';
+export { useIdlePrefetch } from './use-idle-prefetch';
 export { useIdleCallback } from './use-idle-callback';
 export { useIdleEffect } from './use-idle-effect';
 export { useIdleMount } from './use-idle-mount';
@@ -19,6 +21,8 @@ export type {
     UseIdleValueOptions,
     UseIdleValueResult,
 } from './use-idle-value';
+export type { UseIdleImportOptions } from './use-idle-import';
+export type { PrefetchAs, UseIdlePrefetchOptions } from './use-idle-prefetch';
 export type { UseIdleCallbackOptions } from './use-idle-callback';
 export type { IdleEffectCleanup, UseIdleEffectOptions } from './use-idle-effect';
 export type {
